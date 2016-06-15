@@ -76,8 +76,9 @@ public class ColumnSnapshotGenerator extends JdbcSnapshotGenerator {
                 } else {
                     // SQL Server 2000
                     // https://technet.microsoft.com/en-us/library/aa224810%28v=sql.80%29.aspx
+                    //https://technet.microsoft.com/zh-cn/library/ms181071(v=sql.105).aspx
                     sql =
-                            "SELECT CAST([p].[value] AS [ntext]) AS [REMARKS] " +
+                            "SELECT CAST([p].[value] AS [nvarchar](4000)) AS [REMARKS] " +
                                     "FROM [dbo].[sysproperties] AS [p] " +
                                     "WHERE [p].[id] = OBJECT_ID(N'" + database.escapeStringForDatabase(database.escapeTableName(schema.getCatalogName(), schema.getName(), relation.getName())) + "') " +
                                     "AND [p].[smallid] = COLUMNPROPERTY([p].[id], N'" + database.escapeStringForDatabase(column.getName()) + "', 'ColumnId') " +

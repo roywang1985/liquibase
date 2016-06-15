@@ -50,15 +50,30 @@ public class TableSnapshotGenerator extends JdbcSnapshotGenerator {
                     schemaName = tableSchema.getName();
                 }
 
-                List<String> remarks = ExecutorService.getInstance().getExecutor(snapshot.getDatabase()).queryForList(new RawSqlStatement("SELECT\n" +
-                        " CAST(value as varchar(max)) as REMARKS\n" +
-                        " FROM\n" +
-                        " sys.extended_properties\n" +
-                        "  WHERE\n" +
-                        " name='MS_Description' " +
-                        " AND major_id = OBJECT_ID('" + database.escapeStringForDatabase(database.escapeTableName(null, schemaName, table.getName())) + "')\n" +
-                        " AND\n" +
-                        " minor_id = 0"), String.class);
+                String sql;
+                if (database.getDatabaseMajorVersion() >= 9) {
+                    // SQL Server 2005 or later
+                    // https://technet.microsoft.com/en-us/library/ms177541.aspx
+                    sql = "SELECT\n" +
+                            " CAST(value as varchar(max)) as REMARKS\n" +
+                            " FROM\n" +
+                            " sys.extended_properties\n" +
+                            "  WHERE\n" +
+                            " name='MS_Description' " +
+                            " AND major_id = OBJECT_ID('" + database.escapeStringForDatabase(database.escapeTableName(null, schemaName, table.getName())) + "')\n" +
+                            " AND\n" +
+                            " minor_id = 0";
+                }else{
+                    // SQL Server 2000
+                    // https://technet.microsoft.com/en-us/library/aa224810%28v=sql.80%29.aspx
+                    sql = "SELECT CAST([p].[value] AS [nvarchar](4000)) AS [REMARKS] " +
+                            "FROM [dbo].[sysproperties] AS [p] " +
+                            "WHERE [p].[id] = OBJECT_ID(N'" + database.escapeStringForDatabase(database.escapeTableName(null, schemaName, table.getName())) + "') " +
+                            "AND [p].[smallid] = 0 " +
+                            "AND [p].[type] = 3 " +
+                            "AND [p].[name] = 'MS_Description'";
+                }
+                List<String> remarks = ExecutorService.getInstance().getExecutor(snapshot.getDatabase()).queryForList(new RawSqlStatement(sql), String.class);
 
                 if (remarks != null && remarks.size() > 0) {
                     table.setRemarks(StringUtils.trimToNull(remarks.iterator().next()));
